@@ -1,0 +1,90 @@
+What would we need for MrJob equivalence? (Not necessarily using the same techniques / all-python, but the same ease of use and general functionality.)
+
+* protocols: convert to/from JSON, CSV, raw values
+* upload assets (code, input file, bootstrap)
+
+What's already there: 
+
+* send output back to your local computer (mjob -o)
+* easy bootstrapping
+
+What is neither in MrJob or in mjob, but need/want nonetheless: 
+
+* handle dependencies for any language (using a registration system)
+  - for python: allow for automatic dependency inclusion (using pip freeze)
+    or manual inclusion per step (potentially faster to run)
+
+(We'd want to forego pip bundle and instead do something like 
+`pip install cssselect --find-links ./packages --no-index` so we can have *one*
+"repository" but allow people to specify specific dependencies per step)
+
+TODO
+----
+
+* put pipeline in YAML and convert to JSON
+* article enhancement steps
+* create init script w/ pip bundle <name of bundle>.pybundle -r requirements.txt
+* keep track of failures (important once I start automating)
+
+Python packaging
+----------------
+
+We need to be able to bundle all dependencies together, but also have the ability to only 
+install a subset of them (to speed up initialization for steps that don't have big dependencies).
+
+Locally: 
+
+* create a temporary file:
+    export MANTA_REQUIREMENTS=`mktemp -t mantac`
+    export MANTA_PACKAGES=`mktemp -d -t mantac`
+* do pip freeze >> $MANTA_REQUIREMENTS, but bail if not in virtual environment
+  (we'd have potentially a zillion packages)
+* mkdir pip install -d $MANTA_PACKAGES -r $MANTA_REQUIREMENTS
+* <<tar>> $MANTA_PACKAGES
+* convert our YAML config into executable installation instructions
+  (a pip requirements file for every step, which is identical to requirements.txt
+  if there isn't a more specific requirements step)
+  Also convert it into a job description JSON.
+* Upload code and dependencies.
+
+==> Actually, I think it's better to look for requirements.txt, compare that with 
+    the output of pip freeze, and if they differ, give a warning / the option to abort.
+    The trouble with automating too much is that e.g. if you install a custom package
+    (from a git location) pip won't keep that metadata in your requirements.txt
+
+On the server: 
+
+* run bootstrap script for whatever language environment our step is in
+  Currently, this will only be python, and the Python bootstrap is simply: 
+    curl -O https://raw.github.com/pypa/pip/master/contrib/get-pip.py;python get-pip.py
+    <<untar>>
+* for every step: pip install --find-links ./jobname/packages/python -r step-x.txt
+
+Local testing
+
+* create a virtualenv for every step, with just the packages for that step
+* emulate how Joyent pipes lines into stdin
+
+askmanta / jam
+
+* keep a history of job ids, so we can do e.g. `mantac status` without specifying 
+a job id, and it'll just assume you're inquiring about the last job you started
+
+* jam create <myjob.yml>
+  -b --build (build step file, zip up files etc. but don't submit)
+  -s --stage (build and upload, but don't run yet)
+  -j --job   (just create the job, don't worry about dependencies, 
+              useful for recurring jobs)
+  -w --watch <tick=10s>
+    (wait for job to complete, returning a `jam status` report for every step that completes)
+  -o --cat-outputs (will return output; this also implies -w)
+  -d --discard (deletes all information about the job after it's run, depends on -w)
+    (does not apply to output stored in /:login/stor, of course)
+* jam status <job id>
+  -> gives an overview of job status, if there's any errors, downloads those and 
+     displays them, etc.
+* jam ls (list jobs)
+  -l --long (actually fetches each job's job.json, sorts by job name and lists all runs by date
+  and whether they succeeded or not, runtime, plus also total GB in use)
+* jam rm (cleans job files)
+  -d --delta 0 (only wipe jobs older than delta days)

@@ -65,26 +65,32 @@ Local testing
 * create a virtualenv for every step, with just the packages for that step
 * emulate how Joyent pipes lines into stdin
 
-askmanta / jam
+askmanta
 
-* keep a history of job ids, so we can do e.g. `mantac status` without specifying 
+* keep a history of job ids, so we can do e.g. `askmanta status` without specifying 
 a job id, and it'll just assume you're inquiring about the last job you started
 
-* jam create <myjob.yml>
+* askmanta create <myjob.yml>
   -b --build (build step file, zip up files etc. but don't submit)
   -s --stage (build and upload, but don't run yet)
   -j --job   (just create the job, don't worry about dependencies, 
               useful for recurring jobs)
   -w --watch <tick=10s>
-    (wait for job to complete, returning a `jam status` report for every step that completes)
+    (wait for job to complete, returning a `askmanta status` report for every step that completes)
   -o --cat-outputs (will return output; this also implies -w)
+  -i --input (what input to run the job on -- can take both local and manta path, in 
+              case of the former it will upload [unless run locally])
+  -l --local (run locally -- works best for pure map/reduce where you're not really using
+              Manta internals, otherwise you might have to special-case your code here and there)
   -d --discard (deletes all information about the job after it's run, depends on -w)
     (does not apply to output stored in /:login/stor, of course)
-* jam status <job id>
+  -D --discard-all (deletes all job info + dependencies)
+* askmanta status <job id>
   -> gives an overview of job status, if there's any errors, downloads those and 
      displays them, etc.
-* jam ls (list jobs)
+* askmanta ls (list jobs)
   -l --long (actually fetches each job's job.json, sorts by job name and lists all runs by date
   and whether they succeeded or not, runtime, plus also total GB in use)
-* jam rm (cleans job files)
-  -d --delta 0 (only wipe jobs older than delta days)
+* askmanta rm (cleans job files)
+  -a --age 0 (only wipe jobs older than x days)
+  -D --discard-all (also wipe job dependencies, that is, everything in /directives)

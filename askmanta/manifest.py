@@ -109,15 +109,8 @@ class PythonPackageStore(Store):
         cache = os.path.join(self.basedir, 'python')
         self.clear(cache)
 
-        # add pip
-        pip_src = 'https://github.com/pypa/pip'
-        pip_dest = os.path.join(self.cachepath, 'pip')
-        pip_junk = ['.git', 'tests']
-        subprocess.call(["git", "clone", "--depth=1", pip_src, pip_dest])
-        for path in pip_junk:
-            subprocess.call(["rm", "-rf", os.path.join(pip_dest, path)])
-
         # add modules
+        # TODO: a pool is pointless if we don't monkeypatch
         pool = Pool(4)
         download = lambda package: subprocess.call(["pip", "install", "-d", cache, package])
         pool.map(download, self.files)
@@ -126,17 +119,10 @@ class PythonPackageStore(Store):
         self.close()
 
 
+# Manta comes with pip 1.2.1 out of the box, so installing 
+# our packages is pretty straightforward.
 class PythonPackageManifest(Manifest):
     STORE_CLASS = PythonPackageStore
-
-    def __init__(self, name, phase):
-        super(PythonPackageManifest, self).__init__(name, phase)
-        cmd = "python {root}/{name}/pip/setup.py install".format(
-            account=client.account, 
-            root=self.phase.directive.manta_tmp,
-            name=self.name,
-            )
-        self.init.insert(0, cmd)
 
     def add(self, *items):
         self.items.extend(items)

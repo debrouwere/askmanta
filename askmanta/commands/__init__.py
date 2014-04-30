@@ -54,7 +54,10 @@ def parse():
             help="The input files (on Manta) on which your job should run.")
         command.add_argument('-t', '--test', 
             default=False, action='store_true', 
-            help="Do a test run and don't actually submit the job.")
+            help="Print the phase JSON instead of submitting it.")
+        command.add_argument('-l', '--local', 
+            default=False, action='store_true', 
+            help="Run on the local machine (if possible).")
         command.add_argument('-w', '--watch', 
             default=False, nargs='?', type=int, 
             help="wait for job to complete, checking every n seconds for an update, and return a status report for every step that completes")
@@ -64,6 +67,9 @@ def parse():
         command.add_argument('-d', '--discard',
             default=False, action='store_true',
             help="deletes all information about the job after it's run, depends on -w or -o")
+        command.add_argument('-D', '--discard-all',
+            default=False, action='store_true',
+            help="discard not just job metadata but also job directive dependencies")
 
     status = subparsers.add_parser('status', 
         help="gives an overview of job status, if there's any errors, downloads those and displays them, etc.")
@@ -74,16 +80,24 @@ def parse():
     ls.set_defaults(func=stor.ls)
     ls.add_argument('-l', '--long',
         default=False, action='store_true',
-        help="sort jobs by job name and list various metadata")
+        help="sort jobs by job directive and list various metadata")
+    ls.add_argument('-d', '--directives',
+        default=False, action='store_true',
+        help="list only job directives")
+    ls.add_argument('-a', '--active',
+        default=False, action='store_true',
+        help="list only jobs that are currently running")
 
     rm = subparsers.add_parser('rm', 
         help="remove job files")
     rm.set_defaults(func=stor.rm)
     rm.add_argument('id', nargs='?', default=None)
-    rm.add_argument('-d', '--delta',
+    rm.add_argument('-a', '--ago',
         default=False, action='store_true',
         help="wipe all jobs older than n days")
-
+    rm.add_argument('-D', '--discard-all',
+        default=False, action='store_true',
+        help="discard not just job metadata but also job directive dependencies")
 
     args = arguments.parse_args()
 

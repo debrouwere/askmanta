@@ -128,6 +128,15 @@ class Directive(object):
         self.stage()
         return self.submit(inputs=inputs)
 
+    def local_run(self, inputs):
+        """
+        * create a virtualenv for every step, with just the packages for that step
+        * emulate how Joyent pipes lines into stdin
+        * local runs can't really work if the phases have side-effects, but if 
+          they don't and if the input files are local too, things should work swimmingly
+        """
+        raise NotImplementedError()
+
     def __len__(self):
         return len(self.spec)
 

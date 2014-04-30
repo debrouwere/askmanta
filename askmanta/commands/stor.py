@@ -2,19 +2,19 @@
 
 import json
 import itertools
-from gevent.pool import Pool
 from prettytable import PrettyTable
 from dateutil.parser import parse
 from askmanta.job import Job
 from askmanta.environment import client
 
-
 # TODO: should also get errors (if any) etc.
 # (ideally implement this as a pure API function which we can then 
 # use in different contexts)
+# TODO: if status is asked for without a job, display 
+# all running jobs, their phase and any errors (== ls -a)
 def status(job, args):
     job.poll()
-    phase = "/".join(job.cursor)
+    phase = "/".join(map(str, job.cursor))
     errors = job.stats['errors']
     time = job.ctime.strftime("%y/%m/%d %H:%M")
 
@@ -29,14 +29,12 @@ def ls(args):
     jobs = client.list_directory(directory)
 
     if args.long:
-        pool = Pool(8)
-
         def fetch(jobfile):
             job = Job(jobfile['name'])
             job.poll()
             return job
 
-        jobfiles = pool.map(fetch, jobs)
+        jobfiles = map(fetch, jobs)
         jobs = itertools.groupby(jobfiles, lambda job: job.name)
 
         for name, runs in jobs:
